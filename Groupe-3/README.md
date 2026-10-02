@@ -1,69 +1,107 @@
-# Groupe 3 – Panier, commandes et livraison
+# Groupe 3: Panier, commandes et livraison
 
-Module du **Projet de Génie Logiciel – Session normale Summer 2026** (plateforme e-commerce, 5 groupes).
-Ce module gère le parcours d'achat : panier, passage de commande, suivi d'état, factures, livraison, annulation et remboursement.
+Module « Panier, commandes et livraison » Projet de Systèmes Numériques,
+ICT University (section francophone), dirigé par M. Guy Atangana.
 
-**Technologies :** Node.js, Express, SQLite (better-sqlite3), JWT, tests avec Jest et Supertest.
+Voir [`docs/analyse-conception.md`](docs/analyse-conception.md) pour
+l'analyse des besoins et la conception détaillée (synchronisé avec le
+support de présentation du groupe), et
+[`docs/integration-api.md`](docs/integration-api.md) pour le guide
+d'intégration destiné aux autres groupes (endpoints, formats, dépendances).
 
-## Fonctionnalités
+Le PowerPoint et le rapport Word de présentation du projet se trouvent
+dans [`livrables/`](livrables/).
 
-- Panier par client : ajouter, modifier, retirer, vider, total calculé
-- Commande à partir du panier, avec réservation du stock « tout ou rien » et prix figés
-- Cycle de vie : `PENDING → CONFIRMED → PREPARING → SHIPPED → DELIVERED` (+ `CANCELLED`, `REFUNDED`)
-- Facture générée à la confirmation (JSON et HTML imprimable)
-- Suivi de livraison, historique complet des changements d'état
-- Rôles `CLIENT`, `ADMIN`, `LIVREUR` (jeton JWT fourni par le Groupe 1)
+## Stack technique
 
-## Installation et lancement
+- Node.js + Express (API REST)
+- Sequelize + PostgreSQL (persistance) — SQLite en mémoire pour les tests
+- Jest + Supertest (tests)
 
-Prérequis : [Node.js](https://nodejs.org) 18 ou plus récent.
+## Structure du projet
+
+```
+src/
+  config/       # connexion base de données
+  models/       # Panier, LignePanier, Commande, LigneCommande, Facture, Livraison
+  services/     # logique métier (panier, commande, facture, livraison)
+  controllers/  # gestion des requêtes HTTP
+  routes/       # définition des routes de l'API
+  middlewares/  # authentification, gestion des erreurs
+  server.js     # point d'entrée
+tests/          # tests unitaires, intégration, fonctionnels
+docs/           # documentation d'analyse et de conception
+```
+
+## Installation
 
 ```bash
-cd Groupe-3
 npm install
-npm test        # lance les 46 tests
-npm start       # démarre l'API sur http://localhost:3003
+cp .env.example .env   # puis renseigner les identifiants PostgreSQL
+npm run dev
 ```
 
-Variables d'environnement (facultatives) :
+## Tests
 
-| Variable | Défaut | Rôle |
-|----------|--------|------|
-| `PORT` | `3003` | Port du serveur |
-| `JWT_SECRET` | `dev-secret-a-remplacer` | Secret partagé avec le Groupe 1 (à changer) |
-| `DB_FILE` | `data/groupe3.db` | Fichier de la base SQLite |
-
-## Organisation du dossier
-
-```
-Groupe-3/
-├── README.md
-├── package.json
-├── docs/
-│   ├── Analyse_des_besoins_Groupe3.docx   Étape 1 : analyse
-│   ├── Conception_Groupe3.docx            Étape 2 : conception (diagrammes)
-│   ├── Guide_integration_API.md           Guide pour les autres groupes
-│   ├── Plan_de_tests.md                   Plan et résultats des tests
-│   ├── diagrams/                          Images et sources des diagrammes
-│   └── schema.sql                         Schéma de la base de données
-├── src/
-│   ├── app.js, server.js, config.js
-│   ├── routes/          Endpoints REST
-│   ├── services/        Règles métier (panier, commandes, états)
-│   ├── middleware/      Authentification JWT, gestion des erreurs
-│   ├── integrations/    Interface du catalogue (Groupe 2)
-│   └── db/              Schéma SQL et ouverture de la base
-└── tests/               Tests automatisés
+```bash
+npm test
 ```
 
-## Documentation
+## Statut du projet
 
-- [Analyse des besoins](docs/Analyse_des_besoins_Groupe3.docx)
-- [Conception](docs/Conception_Groupe3.docx)
-- [Guide d'intégration de l'API](docs/Guide_integration_API.md)
-- [Plan de tests](docs/Plan_de_tests.md)
+- [x] Analyse des besoins
+- [x] Conception (modèle de données, architecture)
+- [x] Développement (panier, validation de commande, facture, remboursement, transitions de statut)
+- [x] Tests (tunnel d'achat complet : 15 tests passants, dont l'intégration Groupe 2)
+- [x] Documentation d'intégration pour les autres groupes (`docs/integration-api.md`)
+- [ ] Documentation OpenAPI/Swagger (nice-to-have, non bloquant)
+- [x] Branchement réel sur l'API du Groupe 2 (catalogue) — code prêt (`CATALOG_SERVICE_MOCK=false`), à activer dès que leur serveur tourne en continu
+- [ ] Branchement réel sur l'API du Groupe 1 (authentification), en attente de leur livraison
 
-## Limites connues
+## Intégration avec le Groupe 2 (catalogue/stock)
 
-- Le paiement est **simulé** : la confirmation de la commande vaut paiement accepté.
-- Le catalogue utilisé par défaut est une version **en mémoire** (données de démonstration). Il sera remplacé par le module du Groupe 2 via l'interface décrite dans le guide d'intégration.
+Le code source de leur module se trouve dans
+[`groupe-2-catalogue-stocks/`](groupe-2-catalogue-stocks/) (Flask/Python,
+31 tests, voir son propre README pour l'installer et le lancer en local :
+`python run.py`, écoute sur `http://localhost:5002`).
+
+Par défaut, `src/services/catalogueClient.js` tourne en **mode simulation**
+(`CATALOG_SERVICE_MOCK=true` ou `CATALOG_SERVICE_URL` non renseignée), avec un
+petit catalogue de démonstration. Pour utiliser leur vraie API (une fois leur
+serveur lancé), renseigner dans `.env` :
+
+```
+CATALOG_SERVICE_URL=http://localhost:5002/api
+CATALOG_SERVICE_MOCK=false
+CATALOG_ADMIN_KEY=<valeur de ADMIN_API_KEY dans leur .env>
+```
+
+Contrat réel exposé par le Groupe 2 (voir
+[`groupe-2-catalogue-stocks/docs/integration-api.md`](groupe-2-catalogue-stocks/docs/integration-api.md)) :
+`GET /api/produits/:id` retourne `{ prix, stock }`, et la validation de
+commande déclenche `POST /api/stock/:id/mouvement { variation }` (en-tête
+`x-admin-key` requis) pour décrémenter réellement le stock.
+
+## Points d'API exposés
+
+| Méthode | Route | Description |
+|---|---|---|
+| GET | `/api/panier` | Consulter le panier actif (avec total) |
+| POST | `/api/panier/lignes` | Ajouter un produit `{ produitId, quantite }` |
+| PATCH | `/api/panier/lignes/:ligneId` | Modifier la quantité `{ quantite }` |
+| DELETE | `/api/panier/lignes/:ligneId` | Retirer une ligne |
+| POST | `/api/commandes` | Valider la commande `{ adresse }` |
+| GET | `/api/commandes/historique` | Historique des commandes du client |
+| GET | `/api/commandes/:commandeId` | Détail d'une commande |
+| POST | `/api/commandes/:commandeId/annuler` | Annuler (avant expédition) |
+| PATCH | `/api/commandes/:commandeId/statut` | Mettre à jour le statut (gestionnaire) |
+
+Toutes les routes nécessitent l'en-tête `x-client-id` (stub d'authentification
+en attendant l'intégration réelle avec le Groupe 1).
+
+## Dépendances avec les autres groupes
+
+- Groupe 1 (authentification) — vérification de l'identité du client
+- Groupe 2 (catalogue/stock) — vérification de la disponibilité et du prix
+- Groupe 4 (frontend) — interfaces panier / suivi / facture
+- Groupe 5 (infra/tests globaux) — intégration continue et tests de bout en bout
